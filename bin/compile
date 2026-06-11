@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BUILD_DIR=$1
+CACHE_DIR=$2
+ENV_DIR=$3
+
+BUN_VERSION="latest"
+if [ -f "$ENV_DIR/BUN_VERSION" ]; then
+  BUN_VERSION=$(cat "$ENV_DIR/BUN_VERSION" | tr -d '[:space:]')
+fi
+
+if [ "$BUN_VERSION" = "latest" ]; then
+  echo "-----> Resolving latest Bun version..."
+  REDIRECT=$(curl -fsSI "https://github.com/oven-sh/bun/releases/latest" | grep -i "^location:" | tr -d '\r')
+  BUN_VERSION=$(echo "$REDIRECT" | sed 's|.*bun-v||')
+fi
+
+echo "-----> Installing Bun v${BUN_VERSION}"
+
+CACHE_PATH="$CACHE_DIR/bun-$BUN_VERSION"
+BIN_PATH="$BUILD_DIR/.bun/bin"
+ASSET="bun-linux-x64.zip"
+DOWNLOAD_URL="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/${ASSET}"
+
+if [ -f "$CACHE_PATH/bun" ]; then
+  echo "-----> Using cached Bun v${BUN_VERSION}"
+else
+  echo "-----> Downloading $DOWNLOAD_URL"
+  mkdir -p "$CACHE_PATH"
+  curl -fsSL "$DOWNLOAD_URL" -o /tmp/bun.zip
+  unzip -q /tmp/bun.zip -d /tmp/bun-extract
+  cp /tmp/bun-extract/bun-linux-x64/bun "$CACHE_PATH/bun"
+  chmod +x "$CACHE_PATH/bun"
+  rm -rf /tmp/bun.zip /tmp/bun-extract
+fi
+
+mkdir -p "$BIN_PATH"
+cp "$CACHE_PATH/bun" "$BIN_PATH/bun"
+chmod +x "$BIN_PATH/bun"
+
+mkdir -p "$BUILD_DIR/.profile.d"
+cat > "$BUILD_DIR/.profile.d/bun.sh" << 'PROFILE'
+export PATH="$HOME/.bun/bin:$PATH"
+PROFILE
+
+echo "-----> Bun v${BUN_VERSION} installed to .bun/bin/bun"
