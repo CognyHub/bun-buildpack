@@ -39,8 +39,18 @@ mkdir -p "$BIN_PATH"
 cp "$CACHE_PATH/bun" "$BIN_PATH/bun"
 chmod +x "$BIN_PATH/bun"
 
-# Export PATH so heroku-prebuild and postinstall scripts can call bun directly
+# Export PATH so heroku-prebuild can call bun directly
 export PATH="$BIN_PATH:$PATH"
+
+# Export all config vars from ENV_DIR so heroku-prebuild sees VENDOR, TENANT_CODE, etc.
+if [ -d "$ENV_DIR" ]; then
+  for var in "$ENV_DIR"/*; do
+    [ -f "$var" ] || continue
+    key=$(basename "$var")
+    val=$(cat "$var")
+    export "$key=$val"
+  done
+fi
 
 # Run bun install so heroku-prebuild (Procfile selection) and postinstall run
 echo "-----> Running bun install --production"
