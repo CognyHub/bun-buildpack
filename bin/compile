@@ -12,7 +12,7 @@ fi
 
 if [ "$BUN_VERSION" = "latest" ]; then
   echo "-----> Resolving latest Bun version..."
-  REDIRECT=$(curl -fsSI "https://github.com/oven-sh/bun/releases/latest" | grep -i "^location:" | tr -d '\r')
+  REDIRECT=$(curl -fsSI "https://github.com/oven-sh/bun/releases/latest" | grep -i "^location:" | tr -d '')
   BUN_VERSION=$(echo "$REDIRECT" | sed 's|.*bun-v||')
 fi
 
@@ -39,7 +39,6 @@ mkdir -p "$BIN_PATH"
 cp "$CACHE_PATH/bun" "$BIN_PATH/bun"
 chmod +x "$BIN_PATH/bun"
 
-# Export PATH so heroku-prebuild can call bun directly
 export PATH="$BIN_PATH:$PATH"
 
 # Export all config vars from ENV_DIR so heroku-prebuild sees VENDOR, TENANT_CODE, etc.
@@ -52,12 +51,17 @@ if [ -d "$ENV_DIR" ]; then
   done
 fi
 
-# Run bun install so heroku-prebuild (Procfile selection) and postinstall run
-echo "-----> Running bun install --production"
 cd "$BUILD_DIR"
-bun install --production
 
-# Write profile.d so PATH is set at runtime too
+echo "-----> Running bun install"
+bun install
+
+# Explicitly run heroku-prebuild if defined (bun does not run it automatically)
+if bun run --print heroku-prebuild > /dev/null 2>&1; then
+  echo "-----> Running heroku-prebuild"
+  bun run heroku-prebuild
+fi
+
 mkdir -p "$BUILD_DIR/.profile.d"
 cat > "$BUILD_DIR/.profile.d/bun.sh" << 'PROFILE'
 export PATH="$HOME/.bun/bin:$PATH"
