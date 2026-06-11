@@ -39,6 +39,15 @@ mkdir -p "$BIN_PATH"
 cp "$CACHE_PATH/bun" "$BIN_PATH/bun"
 chmod +x "$BIN_PATH/bun"
 
+# Export PATH so heroku-prebuild and postinstall scripts can call bun directly
+export PATH="$BIN_PATH:$PATH"
+
+# Run bun install so heroku-prebuild (Procfile selection) and postinstall run
+echo "-----> Running bun install --production"
+cd "$BUILD_DIR"
+bun install --production
+
+# Write profile.d so PATH is set at runtime too
 mkdir -p "$BUILD_DIR/.profile.d"
 cat > "$BUILD_DIR/.profile.d/bun.sh" << 'PROFILE'
 export PATH="$HOME/.bun/bin:$PATH"
